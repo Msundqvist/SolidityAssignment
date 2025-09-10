@@ -8,33 +8,21 @@ contract Prenumeration{
     struct PrenItem{
         uint id;
         uint duration;
-        address private owner;
+        uint price;
+        address owner;
         string prenumerationTitle;
         bool isActive;
 
     }
 
-    struct PrenOwner{
-        uint prenId;
-        uint duration;
-        uint price;
-        address owner;
-    }
 
-    prenumerationItem[] public items;
+
 
     PrenumerationState public prenumerationState;
 
 
-    constructor (string [] memory prenumerationOptions ){
-        for (uint i = 0 i < prenumerationOptions.length, i ++ ){
-            items.puch(prenumerationItem({
-                prenumerationTitle: prenumerationOptions[i],
-                id: id 
-
-            }))
-            prenumerationOptions  = PrenumerationState.Paused;
+    constructor {
+      
         }
     }
 
-}
