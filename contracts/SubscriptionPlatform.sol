@@ -30,9 +30,11 @@ contract SubscriptionPlatform {
     mapping(uint =>mapping(address=>Subscription)) public subscriptions;
     mapping(address => uint[]) public createdSubscriptions;
 
+    error NotOwner();
+
 
     modifier onlyOwner() {
-        require(msg.sender == subOwner, "Only owner can call this function!!");
+        if(msg.sender != subOwner) revert NotOwner();
         _;
     }
 
