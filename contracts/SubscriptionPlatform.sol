@@ -3,62 +3,81 @@ pragma solidity ^0.8.28;
 
 contract SubscriptionPlatform {
 
-    address private owner;
+
     enum SubscriptionState { Paused, IsActive }
 
-    struct Subscribe {
-        string title;
-        uint256 durationInDays;
-        uint16 fee;
+    struct SubscribeService {
+        uint id;
+        string name;
+        address owner;
+        uint durationInDays;
+        uint fee;
+        SubscriptionState state;
+        uint earnings;
+    }
+
+    struct Subscription{
+        uint endtime;
         bool exists;
     }
 
-    mapping(address=> Subscribe[]) public subscriptions;
 
+    
+    address private subOwner;
+    uint public subCount;
 
-    SubscriptionState public subscriptionState;
+    mapping(uint=> SubscribeService) public subService;
+    mapping(uint =>mapping(address=>Subscription)) public subscriptions;
+    mapping(address => uint[]) public createdSubscriptions;
 
-    modifier inState(SubscriptionState state) {
-        require(subscriptionState == state, "Invalid state, Action cannot be performed!");
-        _;
-    }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can call this function!!");
+        require(msg.sender == subOwner, "Only owner can call this function!!");
         _;
     }
 
-    constructor() {
-        owner = msg.sender;
-        subscriptionState = SubscriptionState.Paused;
+    constructor(address contractOwner) {
+        subOwner = contractOwner;
     }
 
-    event SubscriptionCreated(string indexed title, uint256 durationInDays, uint16 fee);
+    event SubscriptionCreated(uint256 indexed id, string name, address indexed owner);
 
-    function setState(SubscriptionState state) public onlyOwner {
-        subscriptionState = state;
-    }
 
     function createSubscription(
-        string memory title,
-        uint256 durationInDays,
-        uint16 fee
+        string calldata name,
+        uint durationInDays,
+        uint fee
     )
-        public
-        inState(SubscriptionState.IsActive)
+        external
     {
-        subscriptions[msg.sender].push(Subscribe({
-            title: title,
+        ++subCount;
+        uint id = subCount;
+
+        subService[id] = SubscribeService({
+            id: id,
+            name: name,
+            owner: msg.sender,
             durationInDays: durationInDays,
             fee: fee,
-            exists: true
-        }));
-        
+            state: SubscriptionState.Paused,
+            earnings: 0
+        });
 
-        emit SubscriptionCreated(title, durationInDays, fee);
+        createdSubscriptions[msg.sender].push(id);
+
+        emit SubscriptionCreated(id,name,msg.sender);
     }
-    function getSubscription() public view returns (string[] memory) {
+    function getSubscriptions() external view returns (uint[] memory, string[] memory) {
+        uint[] storage ids = createdSubscriptions[msg.sender];
+        uint idLenght = ids.length;
 
+        string[] memory names = new string[](idLenght);
+
+        for (uint i = 0; i < idLenght; i++) {
+            names[i] = subService[ids[i]].name;
+        }
+
+        return (ids, names);
     }
 
 }
