@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.28;
 
-contract Prenumeration {
+contract SubscriptionPlatform {
 
     address private owner;
     enum SubscriptionState { Paused, IsActive }
@@ -13,8 +13,8 @@ contract Prenumeration {
         bool exists;
     }
 
-    mapping(string => Subscribe[]) public subscriptions;
-    mapping (address =>uint) public subscriptionFees;
+    mapping(address=> Subscribe[]) public subscriptions;
+
 
     SubscriptionState public subscriptionState;
 
@@ -45,15 +45,20 @@ contract Prenumeration {
         uint16 fee
     )
         public
-        onlyOwner
         inState(SubscriptionState.IsActive)
     {
-        subscriptions[title].push(Subscribe({
+        subscriptions[msg.sender].push(Subscribe({
             title: title,
             durationInDays: durationInDays,
             fee: fee,
             exists: true
         }));
+        
+
         emit SubscriptionCreated(title, durationInDays, fee);
     }
+    function getSubscription() public view returns (string[] memory) {
+
+    }
+
 }
