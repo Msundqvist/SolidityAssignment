@@ -14,6 +14,7 @@ contract Prenumeration {
     }
 
     mapping(string => Subscribe[]) public subscriptions;
+    mapping (address =>uint) public subscriptionFees;
 
     SubscriptionState public subscriptionState;
 
