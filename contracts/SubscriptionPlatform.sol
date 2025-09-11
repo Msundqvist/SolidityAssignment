@@ -42,7 +42,7 @@ contract SubscriptionPlatform {
         subOwner = contractOwner;
     }
 
-    event SubscriptionCreated(uint256 indexed id, string name, address indexed owner);
+    event SubscriptionCreated(uint indexed id, string name, address indexed owner);
 
 
     function createSubscription(
@@ -69,6 +69,7 @@ contract SubscriptionPlatform {
 
         emit SubscriptionCreated(id,name,msg.sender);
     }
+
     function getSubscriptions() external view returns (uint[] memory, string[] memory) {
         uint[] storage ids = createdSubscriptions[msg.sender];
         uint idLenght = ids.length;
@@ -80,6 +81,18 @@ contract SubscriptionPlatform {
         }
 
         return (ids, names);
+    }
+
+  function subscribe(uint subscriptionId) external payable{
+        SubscribeService storage service = subService[subscriptionId];
+        require(service.state == SubscriptionState.IsActive, "Subscription is paused.");
+        require(msg.value>= service.fee, "Insuffient payment.");
+
+        Subscription storage customerSub = subscriptions[subscriptionId][msg.sender];
+
+        require(!customerSub.exists|| block.timestamp >=customerSub.endtime, "Your subscription is aleady active");
+
+
     }
 
 }
