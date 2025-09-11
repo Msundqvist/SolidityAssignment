@@ -8,8 +8,8 @@ contract Prenumeration {
 
     struct Subscribe {
         string title;
-        uint16 duration;
-        uint16 price;
+        uint256 durationInDays;
+        uint16 fee;
         bool exists;
     }
 
@@ -32,7 +32,7 @@ contract Prenumeration {
         subscriptionState = SubscriptionState.Paused;
     }
 
-    event SubscriptionCreated(string indexed subscriptionTitle, uint16 duration, uint16 price);
+    event SubscriptionCreated(string indexed title, uint256 durationInDays, uint16 fee);
 
     function setState(SubscriptionState state) public onlyOwner {
         subscriptionState = state;
@@ -40,8 +40,8 @@ contract Prenumeration {
 
     function createSubscription(
         string memory title,
-        uint16 duration,
-        uint16 price
+        uint256 durationInDays,
+        uint16 fee
     )
         public
         onlyOwner
@@ -49,10 +49,10 @@ contract Prenumeration {
     {
         subscriptions[title].push(Subscribe({
             title: title,
-            duration: duration,
-            price: price,
+            durationInDays: durationInDays,
+            fee: fee,
             exists: true
         }));
-        emit SubscriptionCreated(title, duration, price);
+        emit SubscriptionCreated(title, durationInDays, fee);
     }
 }
