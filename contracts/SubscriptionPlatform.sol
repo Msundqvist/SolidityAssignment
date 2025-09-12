@@ -25,10 +25,15 @@ contract SubscriptionPlatform {
     
     address private subOwner;
     uint public subCount;
+    bool private _locked;
+    uint public contractBalance;
 
     mapping(uint=> SubscribeService) public subService;
     mapping(uint =>mapping(address=>Subscription)) public subscriptions;
     mapping(address => uint[]) public createdSubscriptions;
+    mapping(address => uint) internal _balances;
+
+    //skapa en mapping med([key]address => uint[]) public current subscriptions för att se vilka (ID) subscriptions användaren har.
 
     error NotOwner();
 
@@ -38,12 +43,23 @@ contract SubscriptionPlatform {
         _;
     }
 
+        modifier noReentrancy() {
+        require(!_locked, "Stop making re-entracy calls. Please hold");
+        _locked = true;
+        _;
+        _locked = false;
+    }
+
+        modifier hasSufficientBalance(uint withdrawalAmount) {
+        require(_balances[msg.sender] >= withdrawalAmount, "You have an insufficient balance");
+        _;
+    }
     constructor(address contractOwner) {
         subOwner = contractOwner;
     }
 
     event SubscriptionCreated(uint indexed id, string name, address indexed owner);
-
+        event WithdrawalMade(address indexed accountAddress, uint amount);
 
     function createSubscription(
         string calldata name,
@@ -61,13 +77,15 @@ contract SubscriptionPlatform {
             owner: msg.sender,
             durationInDays: durationInDays,
             fee: fee,
-            state: SubscriptionState.Paused,
+            state: SubscriptionState.IsActive,
             earnings: 0
         });
 
         createdSubscriptions[msg.sender].push(id);
 
+        
         emit SubscriptionCreated(id,name,msg.sender);
+        
     }
 
     function getSubscriptions() external view returns (uint[] memory, string[] memory) {
@@ -83,16 +101,44 @@ contract SubscriptionPlatform {
         return (ids, names);
     }
 
-  function subscribe(uint subscriptionId) external payable{
+  function subscribe(uint subscriptionId) external payable noReentrancy{
         SubscribeService storage service = subService[subscriptionId];
         require(service.state == SubscriptionState.IsActive, "Subscription is paused.");
         require(msg.value>= service.fee, "Insuffient payment.");
 
         Subscription storage customerSub = subscriptions[subscriptionId][msg.sender];
 
-        require(!customerSub.exists|| block.timestamp >=customerSub.endtime, "Your subscription is aleady active");
+        require(!customerSub.exists || block.timestamp >= customerSub.endtime, "Subscription is still active.");
+        require(msg.value == service.fee, "Please send in the correkt fee for this subscription.");
+
+        uint newEndtime = block.timestamp + (service.durationInDays * 1 days);
+        subscriptions[subscriptionId][msg.sender] = Subscription({
+            endtime:newEndtime,
+            exists: true
+
+        });
+         service.earnings += msg.value;
+         _balances[service.owner] += msg.value;
+         contractBalance += msg.value;
+
+    assert(subscriptions[subscriptionId][msg.sender].endtime == newEndtime);
+    }
+
+    function withdrawEarnings(uint subId , uint amount)external noReentrancy hasSufficientBalance(amount) {
+    SubscribeService storage service = subService[subId];
+
+    require(service.owner == msg.sender, "Not the service owner");
+    require(amount <= 1 ether, "You cannot withdraw more than 1 ETH per transaction");
 
 
+    _balances[msg.sender] -= amount;
+    contractBalance -= amount;
+
+    payable(msg.sender).transfer(amount);
+
+    assert(contractBalance == address(this).balance);
+
+    emit WithdrawalMade(msg.sender, amount);
     }
 
 }
