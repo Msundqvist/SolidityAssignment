@@ -31,9 +31,10 @@ contract SubscriptionPlatform {
     mapping(uint=> SubscribeService) public subService;
     mapping(uint =>mapping(address=>Subscription)) public subscriptions;
     mapping(address => uint[]) public createdSubscriptions;
-    mapping(address => uint) internal _balances;
+    mapping(address => uint) internal balances;
+    mapping(address => uint[]) public currentSubscriptions;
 
-    //skapa en mapping med([key]address => uint[]) public current subscriptions för att se vilka (ID) subscriptions användaren har.
+ 
 
     error NotOwner();
 
@@ -51,7 +52,7 @@ contract SubscriptionPlatform {
     }
 
         modifier hasSufficientBalance(uint withdrawalAmount) {
-        require(_balances[msg.sender] >= withdrawalAmount, "You have an insufficient balance");
+        require(balances[msg.sender] >= withdrawalAmount, "You have an insufficient balance");
         _;
     }
     constructor(address contractOwner) {
@@ -59,7 +60,8 @@ contract SubscriptionPlatform {
     }
 
     event SubscriptionCreated(uint indexed id, string name, address indexed owner);
-        event WithdrawalMade(address indexed accountAddress, uint amount);
+    event Subscribed (address indexed subscriber, uint indexed subscriptionId, uint endtime);
+    event WithdrawalMade(address indexed accountAddress, uint amount);
 
     function createSubscription(
         string calldata name,
@@ -109,7 +111,7 @@ contract SubscriptionPlatform {
         Subscription storage customerSub = subscriptions[subscriptionId][msg.sender];
 
         require(!customerSub.exists || block.timestamp >= customerSub.endtime, "Subscription is still active.");
-        require(msg.value == service.fee, "Please send in the correkt fee for this subscription.");
+        require(msg.value == service.fee, "Please send in the correct fee for this subscription.");
 
         uint newEndtime = block.timestamp + (service.durationInDays * 1 days);
         subscriptions[subscriptionId][msg.sender] = Subscription({
@@ -118,10 +120,28 @@ contract SubscriptionPlatform {
 
         });
          service.earnings += msg.value;
-         _balances[service.owner] += msg.value;
+         balances[service.owner] += msg.value;
          contractBalance += msg.value;
 
+        bool alreadyExists = false;
+        uint[] storage subscriber = currentSubscriptions[msg.sender];
+
+        for(uint i = 0; i < subscriber.length; i ++ ){
+            if (subscriber[i] == subscriptionId){
+                alreadyExists = true; 
+                break;
+            }
+        }
+
+        if(!alreadyExists){
+            subscriber.push(subscriptionId);
+        }
+
+    emit Subscribed ( msg.sender, subscriptionId, newEndtime);
+
     assert(subscriptions[subscriptionId][msg.sender].endtime == newEndtime);
+
+
     }
 
     function withdrawEarnings(uint subId , uint amount)external noReentrancy hasSufficientBalance(amount) {
@@ -131,7 +151,7 @@ contract SubscriptionPlatform {
     require(amount <= 1 ether, "You cannot withdraw more than 1 ETH per transaction");
 
 
-    _balances[msg.sender] -= amount;
+    balances[msg.sender] -= amount;
     contractBalance -= amount;
 
     payable(msg.sender).transfer(amount);
