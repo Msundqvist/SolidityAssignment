@@ -61,6 +61,7 @@ contract SubscriptionPlatform {
 
     event SubscriptionCreated(uint indexed id, string name, address indexed owner);
     event Subscribed (address indexed subscriber, uint indexed subscriptionId, uint endtime);
+    event SubscriptionGifted(address indexed from , address indexed to , uint indexed subscriptionId, uint endtime); 
     event WithdrawalMade(address indexed accountAddress, uint amount);
 
     function createSubscription(
@@ -141,6 +142,45 @@ contract SubscriptionPlatform {
 
     assert(subscriptions[subscriptionId][msg.sender].endtime == newEndtime);
 
+
+    }
+
+    function giftSubscription(uint subscriptionId, address recipient)external payable noReentrancy{
+        require( recipient != address(0), "invalid recipent address, please try again.");
+        require( recipient != msg.sender, "You cannot gift yourself a subscription.");
+
+        SubscribeService storage service = subService[subscriptionId];
+        require(service.state == SubscriptionState.IsActive, "Subscription is paused.");
+        require(msg.value == service.fee, "incorrect fee.");
+
+        Subscription storage subs = subscriptions[subscriptionId][recipient];
+
+        if( subs.exists && block.timestamp < subs.endtime){
+            subs.endtime += service.durationInDays * 1 days;
+        }else{
+            subs.endtime = block.timestamp + (service.durationInDays * 1 days);
+            subs.exists = true;
+        }
+
+        service.earnings += msg.value;
+        balances[service.owner] += msg.value;
+        contractBalance += msg.value;
+
+        bool alreadyExists = false;
+        uint[] storage recipientSub = currentSubscriptions[recipient];
+
+        for (uint i = 0; i < recipientSub.length; i ++){
+            if(recipientSub[i] == subscriptionId){
+                alreadyExists = true;
+                break;
+            }
+        }
+
+    if (!alreadyExists) {
+        recipientSub.push(subscriptionId);
+    }
+
+        emit SubscriptionGifted(msg.sender, recipient, subscriptionId, subs.endtime);
 
     }
 
