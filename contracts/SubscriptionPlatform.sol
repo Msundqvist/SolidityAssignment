@@ -44,6 +44,12 @@ contract SubscriptionPlatform {
         _;
     }
 
+    modifier onlySubscriptionOwner(uint subId){
+        require(subService[subId].owner == msg.sender, 'Not the service owner');
+        _;
+    }
+
+
         modifier noReentrancy() {
         require(!_locked, "Stop making re-entracy calls. Please hold");
         _locked = true;
@@ -104,7 +110,26 @@ contract SubscriptionPlatform {
         return (ids, names);
     }
 
-  function subscribe(uint subscriptionId) external payable noReentrancy{
+    function changeFee(uint subId, uint newFee) external onlySubscriptionOwner(subId){
+        subService[subId].fee = newFee;
+    }
+
+    function pauseSubscription(uint subId) external onlySubscriptionOwner(subId){
+        subService[subId].state = SubscriptionState.Paused;
+    }
+
+    function resumeSucription(uint subId) external onlySubscriptionOwner(subId){
+        subService[subId].state = SubscriptionState.IsActive;
+    }
+
+    function hasActiveSubscription(uint subId, address user) external view returns(bool){
+        Subscription storage subscriber = subscriptions[subId][user];
+        return (subscriber.exists && subscriber.endtime > block.timestamp);
+    }
+
+
+
+    function subscribe(uint subscriptionId) external payable noReentrancy{
         SubscribeService storage service = subService[subscriptionId];
         require(service.state == SubscriptionState.IsActive, "Subscription is paused.");
         require(msg.value>= service.fee, "Insuffient payment.");
@@ -146,7 +171,6 @@ contract SubscriptionPlatform {
     }
 
     function giftSubscription(uint subscriptionId, address recipient)external payable noReentrancy{
-        require( recipient != address(0), "invalid recipent address, please try again.");
         require( recipient != msg.sender, "You cannot gift yourself a subscription.");
 
         SubscribeService storage service = subService[subscriptionId];
