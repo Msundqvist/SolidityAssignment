@@ -34,32 +34,25 @@ contract SubscriptionPlatform {
     mapping(address => uint) internal balances;
     mapping(address => uint[]) public currentSubscriptions;
 
- 
-
-    error NotOwner();
-
-
-    modifier onlyOwner() {
-        if(msg.sender != subOwner) revert NotOwner();
-        _;
-    }
+    error NotSubscriptionOwner();
 
     modifier onlySubscriptionOwner(uint subId){
-        require(subService[subId].owner == msg.sender, 'Not the service owner');
+        if(subService[subId].owner != msg.sender){
+            revert NotSubscriptionOwner();
+        }
         _;
     }
 
-
-        modifier noReentrancy() {
-        require(!_locked, "Stop making re-entracy calls. Please hold");
-        _locked = true;
-        _;
-        _locked = false;
+    modifier noReentrancy() {
+    require(!_locked, "Stop making re-entracy calls. Please hold");
+    _locked = true;
+    _;
+    _locked = false;
     }
 
-        modifier hasSufficientBalance(uint withdrawalAmount) {
-        require(balances[msg.sender] >= withdrawalAmount, "You have an insufficient balance");
-        _;
+    modifier hasSufficientBalance(uint withdrawalAmount) {
+    require(balances[msg.sender] >= withdrawalAmount, "You have an insufficient balance");
+    _;
     }
     constructor(address contractOwner) {
         subOwner = contractOwner;
@@ -108,6 +101,10 @@ contract SubscriptionPlatform {
         }
 
         return (ids, names);
+    }
+
+    function getCurrentSubscriptions() external view returns(uint[] memory){
+        return currentSubscriptions[msg.sender]; 
     }
 
     function changeFee(uint subId, uint newFee) external onlySubscriptionOwner(subId){
@@ -208,10 +205,7 @@ contract SubscriptionPlatform {
 
     }
 
-    function withdrawEarnings(uint subId , uint amount)external noReentrancy hasSufficientBalance(amount) {
-    SubscribeService storage service = subService[subId];
-
-    require(service.owner == msg.sender, "Not the service owner");
+    function withdrawEarnings(uint subId , uint amount)external noReentrancy onlySubscriptionOwner(subId) hasSufficientBalance(amount) {
     require(amount <= 1 ether, "You cannot withdraw more than 1 ETH per transaction");
 
 

@@ -56,6 +56,67 @@ describe('Subscriptions', () => {
         subscriptions.subscribe(1, { value: 500 })
       ).to.be.revertedWith('Insuffient payment.');
     });
+    it('Should revert if user tries to subscribe while having an active subscription', async () => {
+      const { subscriptions, user } = await subscriptionsFixture();
+
+      await subscriptions.createSubscription('Netflix', 1, 1000);
+      await subscriptions.connect(user).subscribe(1, { value: 1000 });
+
+      await expect(
+        subscriptions.connect(user).subscribe(1, { value: 1000 })
+      ).to.be.revertedWith('Subscription is still active.');
+    });
+    describe('Check active subscriptions', () => {
+      it('Should return true if user has an active subscription', async () => {
+        const { subscriptions, user, owner } = await subscriptionsFixture();
+
+        await subscriptions.createSubscription('Netflix', 1, 1000);
+        await subscriptions.connect(user).subscribe(1, { value: 1000 });
+
+        const isActive = await subscriptions.hasActiveSubscription(
+          1,
+          user.address
+        );
+        expect(isActive).to.be.true;
+      });
+      it('Should return false if subscription does not exist', async () => {
+        const { subscriptions, user } = await subscriptionsFixture();
+
+        const subscriptionId = 1;
+
+        const isActive = await subscriptions.hasActiveSubscription(
+          subscriptionId,
+          user.address
+        );
+        expect(isActive).to.be.false;
+      });
+      it('Should return false if subscription exists but has expired', async () => {
+        const { subscriptions, user } = await subscriptionsFixture();
+
+        await subscriptions.createSubscription('Netflix', 0, 1000);
+        await subscriptions.connect(user).subscribe(1, { value: 1000 });
+
+        const isActive = await subscriptions.hasActiveSubscription(
+          1,
+          user.address
+        );
+        expect(isActive).to.equal(false);
+      });
+    });
+    describe('getCurrentSubscriptions', () => {
+      it('Should return current subscriptions for the user', async () => {
+        const { subscriptions, user } = await subscriptionsFixture();
+
+        await subscriptions.createSubscription('Netflix', 30, 1000);
+        await subscriptions.connect(user).subscribe(1, { value: 1000 });
+
+        const current = await subscriptions
+          .connect(user)
+          .getCurrentSubscriptions();
+        expect(current.length).to.equal(1);
+        expect(current[0]).to.equal(1);
+      });
+    });
   });
 
   describe('Subscription gifted', () => {
@@ -88,6 +149,30 @@ describe('Subscriptions', () => {
       await expect(
         subscriptions.giftSubscription(1, owner.address, { value: 1000 })
       ).to.be.revertedWith('You cannot gift yourself a subscription.');
+    });
+    it('Should extend the recipients subscription if already active', async () => {
+      const { subscriptions, owner, recipient } = await subscriptionsFixture();
+
+      await subscriptions.createSubscription('Netflix', 1, 1000);
+      await subscriptions
+        .connect(owner)
+        .giftSubscription(1, recipient.address, { value: 1000 });
+
+      const originalSub = await subscriptions.subscriptions(
+        1,
+        recipient.address
+      );
+
+      await subscriptions
+        .connect(owner)
+        .giftSubscription(1, recipient.address, { value: 1000 });
+
+      const updatedSub = await subscriptions.subscriptions(
+        1,
+        recipient.address
+      );
+
+      expect(updatedSub.endtime).to.be.greaterThan(originalSub.endtime);
     });
   });
 
@@ -131,6 +216,32 @@ describe('Subscriptions', () => {
       await expect(
         subscriptions.withdrawEarnings(1, parseEther('1'))
       ).to.be.revertedWith('You have an insufficient balance');
+    });
+  });
+
+  describe('Access', () => {
+    it('Should revert with custom error if non-owner tries to change the fee for subscription', async () => {
+      const { subscriptions, recipient } = await subscriptionsFixture();
+
+      await subscriptions.createSubscription('Netflix', 1, 1000);
+
+      await expect(
+        subscriptions.connect(recipient).changeFee(1, 2000)
+      ).to.be.revertedWithCustomError(subscriptions, 'NotSubscriptionOwner');
+    });
+    it('Should revert with custom error if non-owner tries to take out a withdraw from earnings', async () => {
+      const { subscriptions, user, recipient } = await subscriptionsFixture();
+
+      await subscriptions
+        .connect(user)
+        .createSubscription('Netflix', 1, parseEther('1'));
+      await subscriptions
+        .connect(recipient)
+        .subscribe(1, { value: parseEther('1') });
+
+      await expect(
+        subscriptions.connect(recipient).withdrawEarnings(1, parseEther('1'))
+      ).to.be.revertedWithCustomError(subscriptions, 'NotSubscriptionOwner');
     });
   });
 });
