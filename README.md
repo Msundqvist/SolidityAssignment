@@ -65,17 +65,17 @@ några tester kan vara onödiga men jag vågar inte radera testerna när jag upp
 //deploy contract
 Before
 ![beforeDeploy](deployContract.png)
-![deployAfter](image-1.png)
-jag märkte att det kostade mer att göra ändringarna på mina uints
-men i mina funktioner så blev gaskostnaderna mindre
+![afterDeploy](image-13.png)
+jag märkte att det kostade mer att göra ändringarna på mina uints och extra mapping
+men i mina funktioner så blev gaskostnaderna mindre.
 
 här är min createSubscription
 ![beforeCreateSub](createdSubscription.png)
-![afterCreatedsub](image-8.png)
+![afterCreatedSub](image-14.png)
 
-min subscribe function, inte mycket gas men ändå lite
+min subscribe function
 ![beforeSubscribe](subscribed.png)
-![afterSubscribe](subscribedAfter.png)
+![afterSubscribe](image-15.png)
 
 min struct förändring
 ![beforeStruct](stuctBefore.png)
@@ -85,7 +85,7 @@ min struct förändring
 ![beforememory](memory.png)
 ![afterCalldata](calldata.png)
 
-jag har tagit bort mina loopar i subscribe och giftSubscription för att göra det mer gasoptimerat om jag får mer subscribers.. jag räknar med att gå många som gåvar och prenumererar på mina prenumerationer därför gör det inget att jag får högre gas genom att använda mapping
+jag har tagit bort mina loopar i subscribe och giftSubscription för att göra det mer gasoptimerat OM jag får mer subscribers.. jag räknar med att gå många som gåvar och prenumererar på mina prenumerationer därför gör det inget att jag får högre gas genom att använda mapping
 
 ![beforeGiftSub](image-9.png)
 ![mapping](image-10.png)
