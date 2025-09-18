@@ -54,6 +54,21 @@ contract SubscriptionPlatform {
     require(balances[msg.sender] >= withdrawalAmount, "You have an insufficient balance");
     _;
     }
+
+    receive() external payable {
+    balances[msg.sender] += msg.value;
+    contractBalance += msg.value;
+
+    assert(contractBalance == address(this).balance);
+
+    emit DepositMade(msg.sender, msg.value);
+    }
+
+    fallback() external payable {
+    emit FallbackCalled(msg.sender);
+    revert("Fallback function called: invalid function.");
+    }
+    
     constructor(address contractOwner) {
         subOwner = contractOwner;
     }
@@ -62,6 +77,8 @@ contract SubscriptionPlatform {
     event Subscribed (address indexed subscriber, uint indexed subscriptionId, uint endtime);
     event SubscriptionGifted(address indexed from , address indexed to , uint indexed subscriptionId, uint endtime); 
     event WithdrawalMade(address indexed accountAddress, uint amount);
+    event DepositMade(address indexed sender, uint amount);
+    event FallbackCalled(address indexed sender);
 
     function createSubscription(
         string calldata name,
