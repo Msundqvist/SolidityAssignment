@@ -7,13 +7,13 @@ contract SubscriptionPlatform {
     enum SubscriptionState { Paused, IsActive }
 
     struct SubscribeService {
-        uint id;
-        string name;
+        uint128 id;
+        uint128 durationInDays;
+        uint128 fee;        
         address owner;
-        uint durationInDays;
-        uint fee;
-        SubscriptionState state;
         uint earnings;
+        SubscriptionState state;
+        string name;
     }
 
     struct Subscription{
@@ -24,19 +24,19 @@ contract SubscriptionPlatform {
 
     
     address private subOwner;
-    uint public subCount;
-    bool private _locked;
+    uint128 public subCount;
     uint public contractBalance;
+    bool private _locked;
 
-    mapping(uint=> SubscribeService) public subService;
-    mapping(uint =>mapping(address=>Subscription)) public subscriptions;
-    mapping(address => uint[]) public createdSubscriptions;
+    mapping(uint128=> SubscribeService) public subService;
+    mapping(uint128 =>mapping(address=>Subscription)) public subscriptions;
     mapping(address => uint) internal balances;
-    mapping(address => uint[]) public currentSubscriptions;
+    mapping(address => uint128[]) public currentSubscriptions;
+    mapping(address => uint128[]) public createdSubscriptions;
 
     error NotSubscriptionOwner();
 
-    modifier onlySubscriptionOwner(uint subId){
+    modifier onlySubscriptionOwner(uint128 subId){
         if(subService[subId].owner != msg.sender){
             revert NotSubscriptionOwner();
         }
@@ -82,13 +82,13 @@ contract SubscriptionPlatform {
 
     function createSubscription(
         string calldata name,
-        uint durationInDays,
-        uint fee
+        uint128 durationInDays,
+        uint128 fee
     )
         external
     {
         ++subCount;
-        uint id = subCount;
+        uint128 id = subCount;
 
         subService[id] = SubscribeService({
             id: id,
@@ -107,43 +107,43 @@ contract SubscriptionPlatform {
         
     }
 
-    function getSubscriptions() external view returns (uint[] memory, string[] memory) {
-        uint[] storage ids = createdSubscriptions[msg.sender];
-        uint idLenght = ids.length;
+    function getSubscriptions() external view returns (uint128[] memory, string[] memory) {
+        uint128[] storage ids = createdSubscriptions[msg.sender];
+        uint idLength = ids.length;
 
-        string[] memory names = new string[](idLenght);
+        string[] memory names = new string[](idLength);
 
-        for (uint i = 0; i < idLenght; i++) {
+        for (uint i = 0; i < idLength; i++) {
             names[i] = subService[ids[i]].name;
         }
 
         return (ids, names);
     }
 
-    function getCurrentSubscriptions() external view returns(uint[] memory){
+    function getCurrentSubscriptions() external view returns(uint128[] memory){
         return currentSubscriptions[msg.sender]; 
     }
 
-    function changeFee(uint subId, uint newFee) external onlySubscriptionOwner(subId){
+    function changeFee(uint128 subId, uint128 newFee) external onlySubscriptionOwner(subId){
         subService[subId].fee = newFee;
     }
 
-    function pauseSubscription(uint subId) external onlySubscriptionOwner(subId){
+    function pauseSubscription(uint128 subId) external onlySubscriptionOwner(subId){
         subService[subId].state = SubscriptionState.Paused;
     }
 
-    function resumeSucription(uint subId) external onlySubscriptionOwner(subId){
+    function resumeSucription(uint128 subId) external onlySubscriptionOwner(subId){
         subService[subId].state = SubscriptionState.IsActive;
     }
 
-    function hasActiveSubscription(uint subId, address user) external view returns(bool){
+    function hasActiveSubscription(uint128 subId, address user) external view returns(bool){
         Subscription storage subscriber = subscriptions[subId][user];
         return (subscriber.exists && subscriber.endtime > block.timestamp);
     }
 
 
 
-    function subscribe(uint subscriptionId) external payable noReentrancy{
+    function subscribe(uint128 subscriptionId) external payable noReentrancy{
         SubscribeService storage service = subService[subscriptionId];
         require(service.state == SubscriptionState.IsActive, "Subscription is paused.");
         require(msg.value>= service.fee, "Insuffient payment.");
@@ -164,7 +164,7 @@ contract SubscriptionPlatform {
          contractBalance += msg.value;
 
         bool alreadyExists = false;
-        uint[] storage subscriber = currentSubscriptions[msg.sender];
+        uint128[] storage subscriber = currentSubscriptions[msg.sender];
 
         for(uint i = 0; i < subscriber.length; i ++ ){
             if (subscriber[i] == subscriptionId){
@@ -184,7 +184,7 @@ contract SubscriptionPlatform {
 
     }
 
-    function giftSubscription(uint subscriptionId, address recipient)external payable noReentrancy{
+    function giftSubscription(uint128 subscriptionId, address recipient)external payable noReentrancy{
         require( recipient != msg.sender, "You cannot gift yourself a subscription.");
 
         SubscribeService storage service = subService[subscriptionId];
@@ -205,7 +205,7 @@ contract SubscriptionPlatform {
         contractBalance += msg.value;
 
         bool alreadyExists = false;
-        uint[] storage recipientSub = currentSubscriptions[recipient];
+        uint128[] storage recipientSub = currentSubscriptions[recipient];
 
         for (uint i = 0; i < recipientSub.length; i ++){
             if(recipientSub[i] == subscriptionId){
@@ -222,7 +222,7 @@ contract SubscriptionPlatform {
 
     }
 
-    function withdrawEarnings(uint subId , uint amount)external noReentrancy onlySubscriptionOwner(subId) hasSufficientBalance(amount) {
+    function withdrawEarnings(uint128 subId , uint amount)external noReentrancy onlySubscriptionOwner(subId) hasSufficientBalance(amount) {
     require(amount <= 1 ether, "You cannot withdraw more than 1 ETH per transaction");
 
 

@@ -55,3 +55,32 @@ After setting the variable, you can run the deployment with the Sepolia network:
 ```shell
 npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
 ```
+
+Mitt mål var att uppnå VG nivå. Jag har gjort väldigt många tester och uppnåt en coverage på 100%
+![testCoverage](image.png)
+några tester kan vara onödiga men jag vågar inte radera testerna när jag uppfyllt 100%. När jag väl lärde mig att titta på undercoverd lines och partially coverd lines såg jag vad som jag hade missat att fylla i. oftast if satser som inte testat.
+
+// När det gäller gasoptimeringar så har jag i mitt kontrakt nu uint som inte är så gasoptimerat, det ligger också strings emellan uint som gör att det går åt mer gas. Nedan visar jag några av mina gasoptimeringar före och efter jag ändrat mina uints
+
+//deploy contract
+Before
+![beforeDeploy](deployContract.png)
+![deployAfter](image-1.png)
+jag märkte att det kostade mer att göra ändringarna på mina uints
+men i mina funktioner så blev gaskostnaderna mindre
+
+här är min createSubscription
+![beforeCreateSub](createdSubscription.png)
+![afterCreatedsub](image-8.png)
+
+min subscribe function, inte mycket gas men ändå lite
+![beforeSubscribe](subscribed.png)
+![afterSubscribe](subscribedAfter.png)
+
+min struct förändring
+![beforeStruct](stuctBefore.png)
+![stuctAfter](structAfter.png)
+
+ändrat memory till calldata för gasoptimering
+![beforememory](memory.png)
+![afterCalldata](calldata.png)
