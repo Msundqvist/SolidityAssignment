@@ -68,7 +68,7 @@ contract SubscriptionPlatform {
     emit FallbackCalled(msg.sender);
     revert("Fallback function called: invalid function.");
     }
-    
+
     constructor(address contractOwner) {
         subOwner = contractOwner;
     }
@@ -235,5 +235,14 @@ contract SubscriptionPlatform {
 
     emit WithdrawalMade(msg.sender, amount);
     }
+
+    function deposit() public payable {
+    balances[msg.sender] += msg.value;
+    contractBalance += msg.value;
+
+    assert(contractBalance == address(this).balance);
+
+    emit DepositMade(msg.sender, msg.value);
+   }
 
 }

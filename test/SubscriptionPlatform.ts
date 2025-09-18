@@ -11,7 +11,6 @@ describe('Subscriptions', () => {
       'SubscriptionPlatform'
     );
     const subscriptions = await Subscriptions.deploy(owner.address);
-
     return { subscriptions, owner, user, recipient };
   }
 
@@ -323,6 +322,54 @@ describe('Subscriptions', () => {
       await expect(
         subscriptions.connect(recipient).withdrawEarnings(1, parseEther('1'))
       ).to.be.revertedWithCustomError(subscriptions, 'NotSubscriptionOwner');
+    });
+  });
+
+  describe('receive ()', () => {
+    it('Should receive Ether via receive() and emit DepositMade', async () => {
+      const { subscriptions, user } = await subscriptionsFixture();
+      const amount = parseEther('1.0');
+
+      await expect(
+        user.sendTransaction({
+          to: await subscriptions.getAddress(),
+          value: amount,
+        })
+      )
+        .to.emit(subscriptions, 'DepositMade')
+        .withArgs(user.address, amount);
+
+      const contractBalance = await subscriptions.contractBalance();
+      expect(contractBalance).to.equal(amount);
+    });
+  });
+
+  describe('fallback ()', () => {
+    it('Should revert when fallback() is triggerd', async () => {
+      const { subscriptions, user } = await subscriptionsFixture();
+
+      await expect(
+        user.sendTransaction({
+          to: await subscriptions.getAddress(),
+          data: '0x12345678',
+          value: parseEther('0.01'),
+        })
+      ).to.be.revertedWith('Fallback function called: invalid function.');
+    });
+  });
+
+  describe('deposit()', () => {
+    it('Should accept a deposit and update amount', async () => {
+      const { subscriptions, user } = await subscriptionsFixture();
+      const depositAmount = parseEther('1');
+
+      await expect(
+        subscriptions.connect(user).deposit({ value: depositAmount })
+      )
+        .to.emit(subscriptions, 'DepositMade')
+        .withArgs(user.address, depositAmount);
+
+      expect(await subscriptions.contractBalance()).to.equal(depositAmount);
     });
   });
 });
