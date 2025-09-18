@@ -33,6 +33,7 @@ contract SubscriptionPlatform {
     mapping(address => uint) internal balances;
     mapping(address => uint128[]) public currentSubscriptions;
     mapping(address => uint128[]) public createdSubscriptions;
+    mapping(address => mapping(uint128 => bool)) private isSubscribed;
 
     error NotSubscriptionOwner();
 
@@ -108,7 +109,7 @@ contract SubscriptionPlatform {
     }
 
     function getSubscriptions() external view returns (uint128[] memory, string[] memory) {
-        uint128[] storage ids = createdSubscriptions[msg.sender];
+        uint128[] memory ids = createdSubscriptions[msg.sender];
         uint idLength = ids.length;
 
         string[] memory names = new string[](idLength);
@@ -163,20 +164,10 @@ contract SubscriptionPlatform {
          balances[service.owner] += msg.value;
          contractBalance += msg.value;
 
-        bool alreadyExists = false;
-        uint128[] storage subscriber = currentSubscriptions[msg.sender];
-
-        for(uint i = 0; i < subscriber.length; i ++ ){
-            if (subscriber[i] == subscriptionId){
-                alreadyExists = true; 
-                break;
-            }
-        }
-
-        if(!alreadyExists){
-            subscriber.push(subscriptionId);
-        }
-
+     if (!isSubscribed[msg.sender][subscriptionId]) {
+        currentSubscriptions[msg.sender].push(subscriptionId);
+        isSubscribed[msg.sender][subscriptionId] = true;
+    }
     emit Subscribed ( msg.sender, subscriptionId, newEndtime);
 
     assert(subscriptions[subscriptionId][msg.sender].endtime == newEndtime);
@@ -204,19 +195,10 @@ contract SubscriptionPlatform {
         balances[service.owner] += msg.value;
         contractBalance += msg.value;
 
-        bool alreadyExists = false;
-        uint128[] storage recipientSub = currentSubscriptions[recipient];
-
-        for (uint i = 0; i < recipientSub.length; i ++){
-            if(recipientSub[i] == subscriptionId){
-                alreadyExists = true;
-                break;
-            }
-        }
-
-    if (!alreadyExists) {
-        recipientSub.push(subscriptionId);
-    }
+         if (!isSubscribed[msg.sender][subscriptionId]) {
+        currentSubscriptions[msg.sender].push(subscriptionId);
+        isSubscribed[msg.sender][subscriptionId] = true;
+    }       
 
         emit SubscriptionGifted(msg.sender, recipient, subscriptionId, subs.endtime);
 

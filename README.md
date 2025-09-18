@@ -84,3 +84,10 @@ min struct förändring
 ändrat memory till calldata för gasoptimering
 ![beforememory](memory.png)
 ![afterCalldata](calldata.png)
+
+jag har tagit bort mina loopar i subscribe och giftSubscription för att göra det mer gasoptimerat om jag får mer subscribers.. jag räknar med att gå många som gåvar och prenumererar på mina prenumerationer därför gör det inget att jag får högre gas genom att använda mapping
+
+![beforeGiftSub](image-9.png)
+![mapping](image-10.png)
+![gasBefore](image-11.png)
+![gasAfter](image-12.png)
