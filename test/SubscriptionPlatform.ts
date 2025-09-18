@@ -35,6 +35,32 @@ describe('Subscriptions', () => {
       expect(subService.owner).to.equal(owner.address);
       expect(subService.state).to.equal(1);
     });
+    describe('Pause and resume subscriptions', () => {
+      it('Should allow owner to pause and resume subscriptions', async () => {
+        const { subscriptions } = await subscriptionsFixture();
+
+        await subscriptions.createSubscription('Netflix', 30, 1000);
+
+        await subscriptions.pauseSubscription(1);
+        let service = await subscriptions.subService(1);
+        expect(service.state).to.equal(0);
+
+        await subscriptions.resumeSucription(1);
+        service = await subscriptions.subService(1);
+        expect(service.state).to.equal(1);
+      });
+    });
+    describe('Change fee', () => {
+      it('should allow owner to change fee', async () => {
+        const { subscriptions, owner } = await subscriptionsFixture();
+
+        await subscriptions.createSubscription('Netflix', 30, 1000);
+        await subscriptions.connect(owner).changeFee(1, 2000);
+
+        const updated = await subscriptions.subService(1);
+        expect(updated.fee).to.equal(2000);
+      });
+    });
   });
 
   describe('Subscribe', () => {
@@ -65,6 +91,22 @@ describe('Subscriptions', () => {
       await expect(
         subscriptions.connect(user).subscribe(1, { value: 1000 })
       ).to.be.revertedWith('Subscription is still active.');
+    });
+
+    it('Should not duplicate subscriptionId in currentSubscription when subscribing', async () => {
+      const { subscriptions, user } = await subscriptionsFixture();
+
+      await subscriptions.createSubscription('Spotify', 0, 1000);
+      await subscriptions.connect(user).subscribe(1, { value: 1000 });
+
+      let current = await subscriptions.connect(user).getCurrentSubscriptions();
+      expect(current.length).to.equal(1);
+      expect(current[0]).to.equal(1);
+
+      await subscriptions.connect(user).subscribe(1, { value: 1000 });
+
+      current = await subscriptions.connect(user).getCurrentSubscriptions();
+      expect(current.length).to.equal(1);
     });
     describe('Check active subscriptions', () => {
       it('Should return true if user has an active subscription', async () => {
@@ -103,11 +145,14 @@ describe('Subscriptions', () => {
         expect(isActive).to.equal(false);
       });
     });
+
     describe('getCurrentSubscriptions', () => {
       it('Should return current subscriptions for the user', async () => {
         const { subscriptions, user } = await subscriptionsFixture();
 
-        await subscriptions.createSubscription('Netflix', 30, 1000);
+        await subscriptions
+          .connect(user)
+          .createSubscription('Netflix', 30, 1000);
         await subscriptions.connect(user).subscribe(1, { value: 1000 });
 
         const current = await subscriptions
@@ -115,6 +160,32 @@ describe('Subscriptions', () => {
           .getCurrentSubscriptions();
         expect(current.length).to.equal(1);
         expect(current[0]).to.equal(1);
+      });
+      it('Should return created subscriptionid and name', async () => {
+        const { subscriptions } = await subscriptionsFixture();
+
+        await subscriptions.createSubscription('Netflix', 30, 1000);
+        await subscriptions.createSubscription('Spotify', 30, 2000);
+
+        const [ids, names] = await subscriptions.getSubscriptions();
+
+        expect(ids.length).to.equal(2);
+        expect(names[0]).to.equal('Netflix');
+        expect(names[1]).to.equal('Spotify');
+      });
+
+      it('Should teturn an empty array if user dont have a subscription', async () => {
+        const { subscriptions, user } = await subscriptionsFixture();
+        const result = await subscriptions
+          .connect(user)
+          .getCurrentSubscriptions();
+
+        const [ids, names] = await subscriptions
+          .connect(user)
+          .getSubscriptions();
+
+        expect(ids.length).to.equal(0);
+        expect(names.length).to.equal(0);
       });
     });
   });
@@ -173,6 +244,16 @@ describe('Subscriptions', () => {
       );
 
       expect(updatedSub.endtime).to.be.greaterThan(originalSub.endtime);
+    });
+    it('Should revert if trying to gifed a paused subscription', async () => {
+      const { subscriptions, recipient } = await subscriptionsFixture();
+
+      await subscriptions.createSubscription('Netflix', 30, 100);
+      await subscriptions.pauseSubscription(1);
+
+      await expect(
+        subscriptions.giftSubscription(1, recipient.address, { value: 1000 })
+      ).to.be.revertedWith('Subscription is paused.');
     });
   });
 
