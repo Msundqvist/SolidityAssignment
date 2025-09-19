@@ -91,3 +91,9 @@ jag har tagit bort mina loopar i subscribe och giftSubscription för att göra d
 ![mapping](image-10.png)
 ![gasBefore](image-11.png)
 ![gasAfter](image-12.png)
+
+mitt verifierade kontrakt på Etherscan
+https://sepolia.etherscan.io/address/0x2c19501550010E47c56eE84aA5b72bf695004a9E#code
+
+Om jag hade haft tid, min testning tog så lång tid hade jag gjort en frontend samt att jag hade satt in mer säkerhet i mitt smarta kontrakt,
+det vill säga att jag hade lagt till så man kan banna konton, pausa och frysa. Jag hade lagt till det som stöd om inte en användare sköter sin prenumeration. Jag vill inte använda mig av Proxy då det finns både för och nackdelar men jag ser att det kan bli ett problem med säkerhet för intrång att ha två versioner av sitt kontrakt.
